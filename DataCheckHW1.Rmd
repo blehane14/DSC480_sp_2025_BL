@@ -1,0 +1,104 @@
+---
+title: "DataCheck"
+output: pdf_document
+date: "2025-01-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Loading the data sets
+events <- read_csv("events_toy.csv")
+report <- read_csv("report_toy.csv")
+```
+
+```{r}
+# Events
+# Adding Ibis related groups groups
+events_full <- events %>%
+  mutate(group = case_when(
+      coverage_start_timestamp < ibis_coverage_start_timestamp ~ "Pre-Ibis",
+      coverage_start_timestamp >= ibis_coverage_start_timestamp & coverage_start_timestamp <= ibis_coverage_end_timestamp ~ "Ibis", 
+      coverage_start_timestamp > ibis_coverage_end_timestamp ~ "Post-Ibis"))
+
+# Checking if group label added
+head(events_full)
+
+# Counting rows
+events_summary <- events_full %>%
+  group_by(group) %>%
+  summarise(Total_events = n())
+
+# Summary
+print(events_summary)
+```
+
+```{r}
+# Defining coverage days
+events_full <- events_full %>%
+  mutate(
+    coverage_start_timestamp = as.POSIXct(coverage_start_timestamp, origin = "1970-01-01"),
+    coverage_end_timestamp = as.POSIXct(coverage_end_timestamp, origin = "1970-01-01"),
+    coverage_days = as.numeric(difftime(coverage_end_timestamp, coverage_start_timestamp, units = "days")))
+
+# Summarizing coverage
+coverage_summary <- events_full %>%
+  group_by(group) %>%
+  summarise(Total_Coverage_Days = sum(coverage_days, na.rm = TRUE))
+
+# Printing summary
+print(coverage_summary)
+```
+
+```{r}
+# Bar plot
+ggplot(events_summary, aes(x=group, y= Total_events, fill = group)) + 
+  geom_bar(stat = "identity", positon = "dodge") + 
+  labs(title = "Total Events by stage in Ibis", x = "Group", y = "Total Events")
+```
+
+```{r}
+# Histogram
+```
+
+```{ggplot(events_full, aes(x = coverage_duration_days)) +}
+  geom_histogram(                                       
+    binwidth = 50,                                  
+    fill = "red",
+    color = "black") +
+  theme_minimal() +                                     
+  labs(title = "Distribution of Coverage Duration Days",
+    x = "Coverage Duration (Days)",
+    y = "Count")
+```
+
+```{r}
+report_full <- report %>%
+  mutate(across(contains("timestamp"), 
+                ~ if (is.numeric(.x)) as.POSIXct(.x, origin = "1970-01-01") 
+                  else as.POSIXct(.x, format = "%Y-%m-%d %H:%M:%S"))) %>%
+  mutate(across(contains("timestamp"), ~ as.Date(.x))) %>%
+  rename_with(~ str_replace(., "timestamp", "date"), contains("timestamp")) %>%
+  mutate(across(event_type, ~ str_replace(.x, " ", "_"))) %>%
+  mutate(across(event_type, as.factor))
+
+# Summary of the cleaned report data
+head(report_full)
+```
+
+```{r}
+# Report summary
+report_summary <- report_full %>%
+  group_by(event_type) %>%
+  summarise(Total_events = n())
+
+print(report_summary)
+```
+
+```{r}
+ggplot(report_summary, aes(x=event_type, y= Total_events, fill = event_type)) + 
+  geom_bar(stat = "identity", positon = "dodge") + 
+  labs(title = "Events type and their counts", x = "Event type", y = "Total Events")
+```
