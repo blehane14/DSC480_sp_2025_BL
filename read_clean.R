@@ -7,12 +7,17 @@
 library(tidyverse)
 
 # Actual data files
-#events <- read_csv("../data/2024_11_25_utilization_events.csv")
-#report <- read_csv("../data/2024_11_25_utilization_report.csv")
+events <- read_csv("../data/2024_11_25_utilization_events.csv")
+report <- read_csv("../data/2024_11_25_utilization_report.csv")
 
 # Toy data files- these have the row values for each column shuffled separately.
+<<<<<<< HEAD
 events <- read_csv("events_toy.csv")
 report <- read_csv("report_toy.csv")
+=======
+#events <- read_csv("../data/events_toy.csv")
+#report <- read_csv("../data/report_toy.csv")
+>>>>>>> 415b3eceb57d1bfeb34406a1ef1642e842742e17
 
 str(events)
 head(events$event_start_timestamp)

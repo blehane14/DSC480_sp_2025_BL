@@ -91,8 +91,8 @@ ibis_events <- events_full %>%
                        event_start_date < ibis_coverage_start_date + term)
 
     # Old:
-    # filter(event_start_date > first_reminder_complete_date) # %>% ### term here!!
-    # filter(event_start_date < first_reminder_complete_date + term)
+    # filter(event_start_date > ibis_coverage_start_date) # %>% ### term here!!
+    # filter(event_start_date < ibis_coverage_start_date + term)
 
 ### ### This breaks if one of the outcomes does not appear; eg. if term is large.
 
@@ -133,8 +133,29 @@ MIIA_events <- MIIA_term %>%
            term !=0 & event_start_date < ibis_coverage_start_date &
                       event_start_date < coverage_start_date + lag)
 
+MIIA_counts <- MIIA_events %>%
+     mutate(event_type = factor(event_type, levels = event_list)) %>%
+    group_by(pid, event_type)  %>%
+    summarize(count = n(), .groups = "drop") %>%
+    pivot_wider(names_from = event_type, values_from = count)  %>%
+    replace(is.na(.), 0)
+
+MIIA_admit_days <- MIIA_events %>%
+     group_by(pid) %>% summarize(inpatient_days = round(sum(event_duration_days), 0))
+
+MIIA_events_pre <- MIIA_counts %>%
+    full_join(MIIA_admit_days, by = "pid")
+
+MIIA_event_summary <- MIIA_patients_term %>% left_join(MIIA_events_pre, by = "pid") %>%
+    replace(is.na(.), 0) %>%
+    select(pid, emergency, inpatient, inpatient_days)
+
+
+<<<<<<< HEAD
+=======
 ```
 
+>>>>>>> 415b3eceb57d1bfeb34406a1ef1642e842742e17
 ```{r, echo=FALSE}
 #| label: patient-data
 ## Get patient data, HCC scores, observation times
@@ -142,7 +163,22 @@ MIIA_events <- MIIA_term %>%
  cohorts <- rbind(ibis_patients_term, MIIA_patients_term)
  cohorts$cohort <- as.factor(cohorts$cohort)
 
- patients <- report_full %>% select(pid, age, hcc, c(condition_count:urologic_cancer)) %>% 
+```
+
+```{r}
+
+events_summary <- bind_rows(ibis_event_summary, MIIA_event_summary) %>% 
+    inner_join(cohorts, by = "pid") %>% select(-pid)
+
+```
+
+```{r}
+write_csv(events_summary, "events_summary.csv")
+```
+
+
+```{r}
+patients <- report_full %>% select(pid, age, hcc, c(condition_count:urologic_cancer)) %>% 
      distinct(pid, .keep_all = TRUE) %>% filter(pid %in% cohorts$pid)
 
  hcc_scores <- patients %>% select(pid, hcc)
@@ -163,6 +199,7 @@ Use both numerical and graphical summaries
 -   HCC scores, by cohort
 -   Proportion with at least one admission, by cohort
 -   number of admissions, by cohort proportions
+<<<<<<< HEAD
 
 ```{r, echo=FALSE}
 # need to define emergency column to get it working
@@ -253,3 +290,5 @@ ggplot(total_days_coverage, aes(x = org, y = total_coverage_days, fill = org)) +
        y = "Total Days of Coverage") +
   theme_minimal()
 ```
+=======
+>>>>>>> 415b3eceb57d1bfeb34406a1ef1642e842742e17
