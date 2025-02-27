@@ -63,16 +63,7 @@ ggplot(events_summary, aes(x=group, y= Total_events, fill = group)) +
 # Histogram
 ```
 
-```{ggplot(events_full, aes(x = coverage_duration_days)) +}
-  geom_histogram(                                       
-    binwidth = 50,                                  
-    fill = "red",
-    color = "black") +
-  theme_minimal() +                                     
-  labs(title = "Distribution of Coverage Duration Days",
-    x = "Coverage Duration (Days)",
-    y = "Count")
-```
+`{ggplot(events_full, aes(x = coverage_duration_days)) +}   geom_histogram(                                            binwidth = 50,                                       fill = "red",     color = "black") +   theme_minimal() +                                        labs(title = "Distribution of Coverage Duration Days",     x = "Coverage Duration (Days)",     y = "Count")`
 
 ```{r}
 report_full <- report %>%

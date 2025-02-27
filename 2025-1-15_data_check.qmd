@@ -47,7 +47,6 @@ library(readr)
 library(skimr)
 ```
 
-
 #### Check Erik and Brenton google sheet
 
 ```{r}
@@ -56,13 +55,11 @@ library(skimr)
 source("read_clean.R")
 ```
 
-
-#### Check dates 
+#### Check dates
 
 ```{r}
- sum(report_full$ibis_coverage_start_date < report_full$coverage_start_date)
+sum(report_full$ibis_coverage_start_date < report_full$coverage_start_date)
 ```
-
 
 ```{r}
 sum(ymd(report_full$event_end_date) == "1969-12-31")
@@ -72,19 +69,17 @@ sum(ymd(report_full$last_reminder_complete_date) == "1969-12-31")
 
 ```
 
-
 This is just to select only the columns we want.
 
 ```{r}
 idx_0 <- which(names(report_full) == "condition_count") 
  idx_1 <- which(names(report_full) == "urologic_cancer") 
      
- patients <- report_full %>% select(pid, age, org_name, hcc, status, c(idx_0:idx_1)) 
+ patients <- report_full %>% select(pid, age, org_name, hcc, status, c("condition_count":"urologic_cancer")) 
  ## %>% distinct(pid, .keep_all = TRUE) 
  
 ```
- 
- 
+
 ```{r}
 patients %>% filter(str_detect(org_name, "Unicare - Study"))  %>% nrow()
   #  filter(org_name == "Unicare - Study") %>% nrow()
@@ -94,8 +89,6 @@ report_full %>% filter(!is.na(first_reminder_complete_date))
 
 ```
 
-
- 
 ```{r}
 report_full %>% select(pid, org_name, status, contains("covered_days"), consent_date) %>% distinct() %>% 
     summarize(zdays_pre = sum(covered_days_pre_ibis == 0),
@@ -104,22 +97,19 @@ report_full %>% select(pid, org_name, status, contains("covered_days"), consent_
               nocons = sum(is.na(consent_date)))
              
 ```
- 
- 
+
 ```{r}
 report_full %>% filter(!is.na(first_reminder_complete_date)) %>% 
     group_by(org_name) %>% summarize(n = n()) 
-
 ```
- 
+
 ```{r}
 unique(events_full$event_type) 
 
 events_full %>% select(pid) %>% distinct()
 ```
- 
- 
- #### admits pre/post
+
+\#### admits pre/post
 
 ```{r}
 
@@ -145,7 +135,6 @@ post_ibis_admissions_count <- events_full %>% filter(event_start_date > ibis_cov
 
 #### admissions count totals Just Unicare admits pre/post
 
-
 ```{r}
 pre_ibis_admissions_count %>% filter(org_name == "Unicare - Study") %>% 
     summarize(unicare_pre_admits  = sum(admit_count))
@@ -154,7 +143,6 @@ post_ibis_admissions_count %>% filter(org_name == "Unicare - Study") %>%
     summarize(unicare_post_admits = sum(admit_count))
 
 ```
-
 
 #### admissions count totals- All member
 
@@ -176,6 +164,7 @@ events_full %>%  filter(org_name == "Unicare - Study") %>%
 ```
 
 ...but when I filter dates...
+
 ```{r}
 events_full %>% filter(event_start_date  < ibis_coverage_start_date) %>% filter(event_start_date > coverage_start_date) %>%
     summarize(sum(pre_ibis_inpatient), sum(post_ibis_inpatient))
@@ -190,7 +179,7 @@ He is counting post dates differently
 
 #### 
 
-#### Check counts 
+#### Check counts
 
 Patient pid 10392 9 pre and 2 post, which my counts agree with:
 
@@ -224,7 +213,6 @@ events_full %>% filter(post_ibis_inpatient == 1) %>% group_by(pid) %>% summarize
 
 ```
 
-
 ####. Inpatient days pre/post
 
 ```{r}
@@ -250,7 +238,8 @@ post_ibis_inpatient_days <-events_full %>% filter(event_start_date  > ibis_cover
 
 ```
 
-#### Inatient days pre/post  Unicare and All member
+#### Inatient days pre/post Unicare and All member
+
 ```{r}
 
 pre_ibis_inpatient_days %>% filter(org_name == "Unicare - Study") %>% summarize(total_days = sum(total_inpatient_days))
@@ -271,7 +260,7 @@ report_full %>% filter(ibis_coverage_start_date < coverage_start_date) %>%
 
 ```
 
-#### Coverage days pre/post Unicare and All member. 
+#### Coverage days pre/post Unicare and All member.
 
 We `filter(ibis_coverage_start_date < coverage_start_date)`
 
@@ -291,9 +280,6 @@ report_full %>% filter(ibis_coverage_start_date >= coverage_start_date) %>%
    
 ```
 
-
-
-
 Check the various columns in `events_full`
 
 ```{r}
@@ -306,10 +292,7 @@ df_check %>% filter(event_type == "inpatient") %>%
 
 ```
 
-
-
 #### condition barplot
-
 
 ```{r}
 patients %>% 

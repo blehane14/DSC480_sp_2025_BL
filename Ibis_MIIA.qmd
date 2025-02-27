@@ -52,18 +52,16 @@ source("read_clean.R")
 ```
 
 ```{r}
-
-
 ### Eventually will want to filter patients under observation for min number of days,
-###
+### "ibis_coverage_start_date"             "ibis_coverage_end_date"
 
 term <- 0
 lag <- term
 
 ibis_term <- events_full %>%
     filter(str_detect(org_name, "Unicare")) %>%
-    filter(last_reminder_complete_date - first_reminder_complete_date > term) %>%
-    mutate(days = last_reminder_complete_date - first_reminder_complete_date)
+    filter(ibis_coverage_end_date - ibis_coverage_start_date > term) %>%
+    mutate(days = ibis_coverage_end_date - ibis_coverage_start_date)
 
 ibis_patients_term <- ibis_term %>%
     select(pid) %>% distinct() %>% mutate(cohort = "Unicare")
@@ -73,26 +71,24 @@ ibis_patients_term <- ibis_term %>%
 
 ```{r, echo=FALSE}
 #| label: MIIA term
-
-
+# Is MIIA is in the org name
 MIIA_term <- events_full %>% filter(str_detect(org_name, "MIIA")) %>%
-    filter(first_reminder_complete_date - coverage_start_date > term) %>%
-    mutate(days = first_reminder_complete_date - coverage_start_date)
+    filter(ibis_coverage_start_date - coverage_start_date > term) %>%
+    mutate(days = ibis_coverage_start_date - coverage_start_date)
 
 MIIA_patients_term <- MIIA_term %>%
     select(pid) %>% distinct() %>%
     mutate(cohort = "MIIA")
-
 ```
 
 ```{r, echo=FALSE}
 #| label: ibis_events
 ### Ibis summaries
-## round inpatient days
+## Rounding inpatient days
 ibis_events <- events_full %>%
-    filter(term == 0 & event_start_date > first_reminder_complete_date |
-           term != 0 & event_start_date > first_reminder_complete_date &
-                       event_start_date < first_reminder_complete_date + term)
+    filter(term == 0 & event_start_date > ibis_coverage_start_date |
+           term != 0 & event_start_date > ibis_coverage_start_date &
+                       event_start_date < ibis_coverage_start_date + term)
 
     # Old:
     # filter(event_start_date > first_reminder_complete_date) # %>% ### term here!!
@@ -100,7 +96,7 @@ ibis_events <- events_full %>%
 
 ### ### This breaks if one of the outcomes does not appear; eg. if term is large.
 
-event_list <- c("emergency", "inpatient") ## in case one or more are missing
+event_list <- c("emergency", "inpatient") ## If one or more are missing
 
  ibis_counts <- ibis_events %>%
      mutate(event_type = factor(event_type, levels = event_list)) %>%
@@ -133,12 +129,11 @@ ibis_event_summary <- ibis_patients_term %>% left_join(ibis_events_pre, by = "pi
 
 
 MIIA_events <- MIIA_term %>%
-    filter(term == 0 & event_start_date < first_reminder_complete_date |
-           term !=0 & event_start_date < first_reminder_complete_date &
+    filter(term == 0 & event_start_date < ibis_coverage_start_date |
+           term !=0 & event_start_date < ibis_coverage_start_date &
                       event_start_date < coverage_start_date + lag)
 
 ```
-
 
 ```{r, echo=FALSE}
 #| label: patient-data
@@ -162,9 +157,99 @@ obs_times <- rbind(ibis_term, MIIA_term) %>% select(pid, days) %>% distinct()
 
 Use both numerical and graphical summaries
 
-- Age, days and HCC score distributions, by cohort
-- Days under observation by cohort
-- Condition counts, by cohort
-- HCC scores, by cohort
-- Proportion with at least one admission, by cohort
-- number of admissions, by cohort proportions
+-   Age, days and HCC score distributions, by cohort
+-   Days under observation by cohort
+-   Condition counts, by cohort
+-   HCC scores, by cohort
+-   Proportion with at least one admission, by cohort
+-   number of admissions, by cohort proportions
+
+```{r, echo=FALSE}
+# need to define emergency column to get it working
+MIIA_counts <- MIIA_events %>%
+  mutate(event_type = factor(event_type, levels = event_list)) %>%
+  group_by(pid, event_type)  %>%
+    summarize(count = n(), .groups = "drop") %>%
+    pivot_wider(names_from = event_type, values_from = count)  %>%
+    replace(is.na(.), 0)
+
+MIIA_admit_days <- MIIA_events %>%
+     group_by(pid) %>% summarize(inpatient_days = round(sum(event_duration_days), 0))
+
+MIIA_events_pre <- MIIA_counts %>%
+    full_join(MIIA_admit_days, by = "pid")
+
+MIIA_event_summary <- MIIA_patients_term %>% left_join(MIIA_events_pre, by = "pid") %>%
+    replace(is.na(.), 0) %>%
+    select(pid, emergency, inpatient, inpatient_days)
+```
+
+```{r, echo=FALSE}
+# wont run 
+# R-bind used to combine df by rows
+combined_event_summary <- rbind(
+  ibis_event_summary %>% mutate(org = "Unicare"),
+  MIIA_event_summary %>% mutate(org = "MIIA")
+)
+admit_summary <- combined_event_summary %>%
+  mutate(admit = ifelse(inpatient > 0, 1, 0))
+```
+
+```{r, echo=FALSE}
+ggplot(admit_summary, aes(x = org, fill = as.factor(admit))) +
+  geom_bar() +
+  labs(title = "Admissions Comparison", 
+       x = "Organization", 
+       y = "Count", 
+       fill = "Admit Status") +
+  scale_fill_manual(values = c("0" = "red", "1" = "blue"), 
+                    labels = c("Not Admitted", "Admitted")) +
+  theme_minimal()
+```
+
+```{r}
+total_days_coverage <- events_full %>%
+  mutate(coverage_days = as.numeric(ibis_coverage_end_date - ibis_coverage_start_date)) %>%
+  group_by(pid) %>%
+  summarize(total_coverage_days = sum(coverage_days))
+
+print(total_days_coverage)
+```
+
+```{r}
+# Flitering negatives out
+# Coverage days for Unicare patients
+unicare_days_coverage <- events_full %>%
+  filter(str_detect(org_name, "Unicare")) %>%
+  mutate(coverage_days = as.numeric(ibis_coverage_end_date - ibis_coverage_start_date)) %>%
+  group_by(pid) %>%
+  summarize(total_coverage_days = sum(coverage_days)) %>%
+  mutate(org = "Unicare")
+
+# Coverage days for MIIA patients
+miia_days_coverage <- events_full %>%
+  filter(str_detect(org_name, "MIIA")) %>%
+  mutate(coverage_days = as.numeric(ibis_coverage_end_date - ibis_coverage_start_date)) %>%
+  group_by(pid) %>%
+  summarize(total_coverage_days = sum(coverage_days)) %>%
+  mutate(org = "MIIA")
+
+print("Total coverage days for Unicare patients:")
+print(unicare_days_coverage)
+
+print("Total coverage days for MIIA patients:")
+print(miia_days_coverage)
+
+```
+
+```{r}
+total_days_coverage <- rbind(unicare_days_coverage, miia_days_coverage) 
+# Using row bind again
+
+ggplot(total_days_coverage, aes(x = org, y = total_coverage_days, fill = org)) +
+  geom_col() +
+  labs(title = "Total Number of Days of Coverage by Organization", 
+       x = "Organization", 
+       y = "Total Days of Coverage") +
+  theme_minimal()
+```

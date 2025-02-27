@@ -49,7 +49,7 @@ term <- 180
 -   \## stratify above by HCC score quantiles.
 
 ```{r prelim_wrangle, echo = FALSE}
-setwd("~/Dropbox/Projects/Senscio/DSC480_sp_2025")
+#setwd("~/Dropbox/Projects/Senscio/DSC480_sp_2025")
 
 #df <- read_csv("data/2024-06-17T15-18_full_dataset.csv")
 #df <- read_csv("data/2024-08-28_utilization_report.csv")
